@@ -14,11 +14,11 @@ export const initMongoConnection = async () => {
     console.log('MONGODB_DB:', db);
 
     await mongoose.connect(
-      `mongodb+srv://${user}:${pwd}@${url}/${db}?retryWrites=true&w=majority&appName=Contacts`
+      `mongodb+srv://${user}:${pwd}@${url}/${db}?retryWrites=true&w=majority`,
     );
     console.log('Mongo connection successfully established!');
-  } catch (error) {
-    console.log('Error while setting up mongo connection', error);
-    throw error;
+  } catch (e) {
+    console.log('Error while setting up mongo connection', e);
+    throw e;
   }
 };
