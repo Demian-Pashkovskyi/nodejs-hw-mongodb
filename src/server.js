@@ -1,14 +1,16 @@
+import 'dotenv/config';
 import express from 'express';
 import pino from 'pino-http';
 import cors from 'cors';
-import { env } from './utils/env.js';
 import { getAllContacts, getContactById } from './services/contacts.js';
-import mongoose from 'mongoose';
+import { initMongoConnection } from './db/initMongoConnection.js';
 
-const PORT = Number(env('PORT', 3000));
+const PORT = process.env.PORT;
 
-export const setupServer = () => {
-  const app = express();
+const app = express();
+
+function setupServer() {
+  initMongoConnection();
 
   app.use(express.json());
   app.use(cors());
@@ -21,50 +23,70 @@ export const setupServer = () => {
     }),
   );
 
+  app.use((req, res, next) => {
+    console.log(`Time: ${new Date().toLocaleString()}`);
+    next();
+  });
+
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Hello world!',
+    });
+  });
+
   app.get('/contacts', async (req, res) => {
     const contacts = await getAllContacts();
     res.status(200).json({
       status: 200,
-      data: contacts,
       message: 'Successfully found contacts!',
+      data: contacts,
     });
   });
 
-  app.get('/contacts/:contactId', async (req, res) => {
-    const { contactId } = req.params;
-    const contact = await getContactById(contactId);
+  app.get('/contacts/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const contact = await getContactById(id);
 
-    if (!mongoose.isValidObjectId(contactId)) {
-      res.status(404).json({
-        status: 404,
-        message: 'Not correct id',
+      if (!contact) {
+        return res.status(404).json({
+          status: 404,
+          message: `Not Found`,
+        });
+      }
+
+      res.status(200).json({
+        status: 200,
+        message: `Successfully found contact with id ${id}!`,
+        data: contact,
       });
-      return;
-    }
-
-    if (!contact) {
-      res.status(404).json({
-        status: 404,
-        message: 'Not found',
+    } catch (error) {
+      console.error('Error getting contact:', error);
+      res.status(500).json({
+        status: 500,
+        message: 'Internal Server Error',
       });
-      return;
     }
-
-    res.status(200).json({
-      status: 200,
-      data: contact,
-      message: `Successfully found contact with id ${contactId}!`,
-    });
   });
 
-  app.use('*', (req, res) => {
+  app.use('*', (err, req, res, next) => {
     res.status(404).json({
-      status: 404,
       message: 'Not found',
     });
+    next(err);
   });
 
+  app.use((err, req, res, next) => {
+    res.status(500).json({
+      message: 'Something went wrong',
+      error: err.message,
+    });
+    next();
+  });
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
-};
+}
+
+// setupServer();
+export { setupServer };
