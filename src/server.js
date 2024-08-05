@@ -1,13 +1,12 @@
 import 'dotenv/config';
-import express from 'express';
+const express = require('express');
 import pino from 'pino-http';
 import cors from 'cors';
 import { getAllContacts, getContactById } from './services/contacts.js';
 import { initMongoConnection } from './db/initMongoConnection.js';
 
-const PORT = process.env.PORT || 8000;
-
 const app = express();
+const PORT = process.env.PORT || 8000;
 
 function setupServer() {
   initMongoConnection();
