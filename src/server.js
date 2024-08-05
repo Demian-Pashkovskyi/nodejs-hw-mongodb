@@ -4,56 +4,13 @@ import cors from 'cors';
 import { env } from './utils/env.js';
 import { getContact, getContactById } from './services/contacts.js';
 
-const PORT = env.PORT || 3000;
-
 export const setupServer = () => {
   const app = express();
+  
+  const PORT = Number(env('PORT', '3000'));
 
   app.use(express.json());
   app.use(cors());
-
-  app.get('/contacts', async (req, res) => {
-    try {
-      const contacts = await getContact();
-
-      res.status(200).json({
-        status: 'success',
-        message: 'Successfully found contacts!',
-        data: contacts,
-      });
-    } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to retrieve contacts',
-        error: error.message,
-      });
-    }
-  });
-
-  app.get('/contacts/:contactId', async (req, res) => {
-    try {
-      const { contactId } = req.params;
-      const contact = await getContactById(contactId);
-      if (!contact) {
-        return res.status(404).json({
-          status: 'error',
-          message: 'Contact not found',
-        });
-      }
-
-      res.status(200).json({
-        status: 'success',
-        message: `Successfully found contact with id ${contactId}!`,
-        data: contact,
-      });
-    } catch (error) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Contact not found',
-        error: error.message,
-      });
-    }
-  });
 
   app.use(
     pino({
@@ -63,8 +20,22 @@ export const setupServer = () => {
     }),
   );
 
-  app.use('/', (req, res) => {
-    res.status(404).json({ message: 'Not found' });
+  app.use((req, res, next) => {
+    console.log(`Time: ${new Date().toLocaleString()}`);
+    next();
+  });
+
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Hello world!',
+    });
+  });
+
+  app.use('*', (err, req, res, next) => {
+    res.status(404).json({
+      message: 'Not found',
+    });
+    next(err);
   });
 
   app.use((err, req, res, next) => {
@@ -72,9 +43,43 @@ export const setupServer = () => {
       message: 'Something went wrong',
       error: err.message,
     });
+    next();
   });
 
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+  });
+
+  app.get('/contacts', async (req, res) => {
+    const contacts = await getContact();
+    res.status(200).json({
+      message: 'Successfully found contacts!',
+      data: contacts,
+    });
+  });
+
+  app.get('/contacts/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const contact = await getContactById(id);
+
+      if (!contact) {
+        return res.status(404).json({
+          status: 404,
+          message: `Not Found`,
+        });
+      }
+
+      res.status(200).json({
+        message: `Successfully found contact with id ${id}!`,
+        data: contact,
+      });
+    } catch (error) {
+      console.error('Error getting contact:', error);
+      res.status(500).json({
+        status: 500,
+        message: 'Internal Server Error',
+      });
+    }
   });
 };
